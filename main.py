@@ -1,4 +1,7 @@
 import requests
+import os
+import io
+
 #from bs4 import BeautifulSoup
 
   #cookie UA
@@ -24,9 +27,9 @@ class DKApi:
     r = requests.post(login_url, data=values)
     self.cookies = r.cookies
 
-  def fetch_contest_page(self, id):
-    print "Fetching contest page for game id: %s" % id
-    url = "https://www.draftkings.com/contest/gamecenter/%s" % id
+  def fetch_contest_page(self, cid):
+    print "Fetching contest page for game id: %s" % cid
+    url = "https://www.draftkings.com/contest/gamecenter/%s" % cid
     r = requests.get(url, cookies=self.cookies)
 
     #print "Status: %s" % r.status_code
@@ -91,7 +94,7 @@ class DKApi:
 
   #TODO: Can most likely combine this with the find_first using logic
   def find_last_contest(self, lower, upper):
-    print "Finding first contest with lower bound: %s and upper bound: %s" % (lower, upper)
+    print "Finding last contest with lower bound: %s and upper bound: %s" % (lower, upper)
 
     while True:
       if(upper - lower < 2):
@@ -124,20 +127,41 @@ class DKApi:
       return (ranges, None)
 
   #A bit of a weak test, but sees if the contest page returns 200OK and doesn't redirect. 
-  def contest_has_data(self, id):
+  def contest_has_data(self, cid):
     had_data = False
 
-    r = self.fetch_contest_page(id)
+    r = self.fetch_contest_page(cid)
 
     if(r.status_code == 200 and len(r.history) == 0):
-      print "Contest %s had data" % id
+      print "Contest %s had data" % cid
       had_data = True
     
     return had_data
 
+  def download_contest_data(self, cid):
+    r = self.fetch_contest_page(cid)
+
+    directory = self.get_data_directory(cid)
+    filename = "%s/page.html" % directory
+    if not os.path.exists(directory):
+      print "Directory for id %s did not exist, creating" % cid
+      os.makedirs(directory)
+
+    with io.open(filename, 'w') as file:
+      print "Writing html file"
+      file.write(r.text)
+
+  def get_data_directory(self, cid):
+    return "data/%s" % cid
+
 if __name__ == "__main__":
   print "Starting dkBot"
   api = DKApi()
-  first, last = api.find_contest_range(1, 29999999)
+  #first, last = api.find_contest_range(1, 29999999)
+  #print "Finished. First: %s Last: %s" % (first, last)
 
-  print "Finished. First: %s Last: %s" % (first, last)
+  cid = 14296956
+  api.download_contest_data(cid)
+
+
+
